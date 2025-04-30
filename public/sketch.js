@@ -1,31 +1,56 @@
 let socket;
-let circle = { x: 200, y: 200 };
-let lastSend = 0;
-let prevX = -1, prevY = -1;
+let gameState = { players: {}, platforms: [] };
+let left = false, right = false;
 
 function setup() {
-  createCanvas(400, 400);
-  background(240);
-
+  createCanvas(600, 400);
   socket = io();
-
-  socket.on('position', (pos) => {
-    circle = pos;
-  });
+  socket.on("state", data => (gameState = data));
 }
 
 function draw() {
-  background(240);
+  background(220);
 
-  fill(50, 100, 255);
-  noStroke();
-  ellipse(circle.x, circle.y, 50, 50);
-
-  // Only send position if it changed and throttle to ~30fps
-  if ((mouseX !== prevX || mouseY !== prevY) && millis() - lastSend > 33) {
-    socket.emit('move', { x: mouseX, y: mouseY });
-    lastSend = millis();
-    prevX = mouseX;
-    prevY = mouseY;
+  // Platforms
+  for (const plat of gameState.platforms) {
+    fill(100);
+    rectMode(CENTER);
+    rect(plat.x, plat.y, plat.w, plat.h);
   }
+
+  // Players + swords
+  for (const id in gameState.players) {
+    const p = gameState.players[id];
+    fill(p.color);
+    ellipse(p.x, p.y, 30, 30);
+
+    if (p.swinging) {
+      const angle = radians(p.swordAngle);
+      const sx = p.x + cos(angle) * 30;
+      const sy = p.y + sin(angle) * 30;
+      stroke(0);
+      strokeWeight(4);
+      line(p.x, p.y, sx, sy);
+      noStroke();
+    }
+  }
+
+  stroke(0);
+  line(0, 315, width, 315);
+}
+
+function keyPressed() {
+  if (key === "w") socket.emit("jump");
+  if (key === "a") { left = true; sendMove(); }
+  if (key === "d") { right = true; sendMove(); }
+  if (key === " ") socket.emit("swing");
+}
+
+function keyReleased() {
+  if (key === "a") { left = false; sendMove(); }
+  if (key === "d") { right = false; sendMove(); }
+}
+
+function sendMove() {
+  socket.emit("move", { left, right });
 }
