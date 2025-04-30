@@ -2,11 +2,21 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
+const path = require('path');
+
+const PORT = process.env.PORT || 3000;
 
 let circlePos = { x: 200, y: 200 };
 
-app.use(express.static('public'));
+// ✅ Serve static files from /public
+app.use(express.static(path.join(__dirname, 'public')));
 
+// ✅ Serve index.html at root (/) route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ✅ WebSocket connection handling
 io.on('connection', (socket) => {
   console.log(`🟢 New connection: ${socket.id}`);
 
@@ -24,14 +34,7 @@ io.on('connection', (socket) => {
   });
 });
 
-http.listen(3000, () => {
-  const { networkInterfaces } = require('os');
-  const nets = networkInterfaces();
-  for (const name of Object.keys(nets)) {
-    for (const net of nets[name]) {
-      if (net.family === 'IPv4' && !net.internal) {
-        console.log(`🌐 Server running at http://${net.address}:3000`);
-      }
-    }
-  }
+// ✅ Start server with correct port for Render
+http.listen(PORT, () => {
+  console.log(`🌐 Server running on port ${PORT}`);
 });
